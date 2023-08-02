@@ -1,0 +1,72 @@
+---
+title: "SNP admixture"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(jcolors)
+library(ggnewscale)
+```
+
+
+
+
+```{r}
+set_dataset <- tibble(sample=character(),
+                   k=numeric(),
+                   Q=character(),
+                   value=numeric())
+
+micro_metadata <- read_tsv("micro_pop_map.tsv", col_names = TRUE)
+
+for (k in c("2","5", "8")){
+  qfiles <- read_delim(paste0("micro_qfiles/pruned2.",k,".Q"),
+                  col_names = paste0("Q",seq(1:k)),
+                  delim=" ")
+  qfiles$sample <- micro_metadata$sample
+  qfiles$k <- k
+  
+  #This step converts from horizontal to vertical.
+  qfiles %>% gather(Q, value, -sample,-k) -> qfiles
+  set_dataset <- rbind(set_dataset,qfiles)
+}
+
+merged <- merge(set_dataset, micro_metadata, by.x = 'sample', by.y = 'sample')
+
+filter_arrange <- merged %>%
+  distinct(sample, pop) %>%
+  arrange(sample)
+
+merged$sample <- factor(merged$sample, levels = c("B11555", "ATCC 11559", "GL19", "B07367", "B11532", "B11557", "CBS357.93", "B11147", "B11543","B11553", "P3-GL61",  "B11554", "B05459", "B07675", "B07643", "B10187", "B11541", "B11547", "B11535", "B11550", "B11549", "B10548", "B11523", "B11556", "B11533", "B11531", "B11552", "460-P-21", "415-P-21", "ATCC 52813", "ATCC 52814", "NRRL 5553", "CBS 344.29", "ATCC 56019", "NRRL 5551", "B06600", "B06590", "B08956", "B07585", "B07386", "NRRL 5549", "ATCC 52812","NRRL 5546", "NRRL 5547", "NRRL 5552", "NRRL 5548", "NRRL 5558", "NRRL 5550", "ATCC 62417", "CBS11563", "XY03801", "13129",  "CBS112285"))
+
+merged$color <- ifelse(merged$pop == "Clinical","red", "blue")
+
+
+ecology_color <- group_by(merged, sample) %>% summarize(color = unique(color))
+
+
+merged %>% 
+  ggplot() + 
+  geom_bar(stat="identity",position="stack", (aes(x=sample,y=value,fill=factor(Q)))) +
+  xlab("Sample") + 
+  ylab("Ancestry") +
+  theme_dark() +
+  theme(strip.background = element_rect(fill="gray82", color = "Black"), strip.text = element_text(color = "black")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), axis.text.y = element_blank()) +
+  scale_fill_brewer(palette="Dark2",name="K", labels=seq(1:8)) +
+  facet_wrap(~k,ncol=1, strip.position="left") +
+  theme(axis.text.y.left = element_text(size = 8, color = "black"), axis.ticks.x = element_blank(), axis.text.x = element_text(colour = "black", size = 12), axis.ticks.y = element_line(size = 0.11), legend.background = element_rect(colour = "black"), strip.text.y.left = element_text(angle = 0)) +
+  scale_color_identity(name = "Model fit",
+                          breaks = c("red", "blue"),
+                          labels = c("Quadratic", "Cubic"),
+                          guide = "legend") 
+
+
+
+```
+
+
+
+

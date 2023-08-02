@@ -1,0 +1,52 @@
+---
+title: "PCA"
+output: html_notebook
+---
+
+```{r}
+library("adegenet")
+library("scales")
+library("ggplot2")
+library("ggfortify")
+```
+
+
+```{r}
+micro_non_both_filters <-read.PLINK(file='clinical_mico_plink.raw')
+
+#scale to data aka making the points closer together include scale = TRUE "default is false", (nf) is the number of retained pc
+micro_non_filtered <- glPca(micro_non_both_filters, nf = 2)
+
+#barplot of eigenvalues
+micro_non_filtered$eig <- rescale(micro_non_filtered$eig, to=c(0,1))
+eigen <- barplot(micro_non_filtered$eig, main="eigenvalues", col=heat.colors(length(micro_non_filtered$eig)))
+
+#calculating the % variance of the first two PCAs
+eig_sum <- sum(micro_non_filtered$eig)
+pc1 <- print(micro_non_filtered$eig[1])
+pc2 <- print(micro_non_filtered$eig[2])
+var_pc1 <- pc1/eig_sum
+var_pc1
+var_pc2 <- pc2/eig_sum
+var_pc2
+
+micro_non_test <- micro_non_filtered$scores |> data.frame()
+micro_non_test2 <- pop(micro_non_both_filters)
+micro_non_test$Ecology <- micro_non_test2
+micro_non_test$eigen <- micro_non_filtered$eig
+
+df1 <- data.frame(micro_non_test$PC1, micro_non_test$PC2)
+pca_r <- prcomp(df1, scale. = TRUE)
+new_pca <- autoplot(pca_r, data = micro_non_test, colour = 'Ecology', frame = TRUE, frame.type = "norm") +
+  theme_bw() +
+  labs(y = "PC2 (18.07%)", x = "PC1 (38.18%)") +
+  scale_fill_manual(values = c("orangered", "chartreuse3", "#972D15", "Black"), labels = c("Clonal clinical", "Environmental", "Epidemic clinical", "Unknown")) +
+  scale_colour_manual(values = c("orangered", "Chartreuse3", "#972D15", "Black"), labels = c("Clonal clinical", "Environmental", "Epidemic clinical", "Unknown"))
+
+new_pca
+
+```
+
+
+
+

@@ -1,0 +1,439 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#library(ggplot2)
+library(tidyverse)
+library(ggtree)
+library(ape)
+library(phytools)
+library(ggrepel)
+library(Cairo)
+library(treeio)
+library(ggnewscale)
+library(jcolors)
+library(wesanderson)
+```
+
+
+```{r}
+SNP_tree <- read.tree("old_SNPs.fasta.treefile")
+data <- read.csv("RM_names.csv")
+
+group_names <- list(Clinical = c(), Environmental = c(), Unknown = c())
+
+for (row in 1:nrow(data)) {
+  if(data[row, "Isolation.Site"] == "Clinical"){
+    print(data[row, "Isolation.Site"])
+    group_names[["Clinical"]] <- append(group_names[["Clinical"]], data[row, "Strain"]) 
+  }  
+  else if (data[row, "Isolation.Site"] == "Environmental"){
+    group_names[["Environmental"]] <- append(group_names[["Environmental"]], data[row, "Strain"])
+  }
+  else {
+     group_names[["Unknown"]] <- append(group_names[["Unknown"]], data[row, "Strain"])
+  }
+}
+
+print(group_names)
+rerooted <- reroot(SNP_tree, 21)
+grouping_ecology <- groupOTU(rerooted, group_names)
+
+ggtree(grouping_ecology) +
+  geom_tiplab(size = 1.5, aes(color=group), show.legend=FALSE) +
+  scale_color_manual(values=c("red", "green4", "blue")) +
+  geom_nodelab(size = 1, hjust = 2) +
+  geom_tree() +
+  theme_tree() +
+  geom_treescale() +
+  geom_rootedge(0.003) 
+#  geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) < 101), size = 1, label.size = .2) 
+```
+
+
+
+
+```{r}
+tree <- read.newick("concat_orthos.fasta.treefile")
+
+meta_data <- read.csv("wgs_RM_names.csv")
+
+grouping_names <- list(Clinical = c(), Environmental = c(), Unknown = c())
+
+for (row in 1:nrow(meta_data)) {
+  if(meta_data[row, "Isolation.Site"] == "Clinical"){
+    print(meta_data[row, "Isolation.Site"])
+    grouping_names[["Clinical"]] <- append(grouping_names[["Clinical"]], meta_data[row, "Strain"]) 
+  }  
+  else if (meta_data[row, "Isolation.Site"] == "Environmental"){
+    grouping_names[["Environmental"]] <- append(grouping_names[["Environmental"]], meta_data[row, "Strain"])
+  }
+  else {
+     grouping_names[["Unknown"]] <- append(grouping_names[["Unknown"]], meta_data[row, "Strain"])
+  }
+}
+
+group_ecology <- groupOTU(tree, grouping_names)
+
+ggtree(group_ecology) +
+  geom_tiplab(size = 1.5, aes(color=group)) +
+  geom_nodelab(size = 1.5) +
+  scale_color_manual(values=c("red", "green4", "blue"))
+
+```
+
+
+
+
+```{r}
+its_tree <- read.tree("April_27_its_final_rhiz.treefile")
+#pdf("its_tree.pdf")
+
+
+its_tree$tip.label<-gsub("_"," ",its_tree$tip.label)
+its_reroot <- reroot(its_tree, 3)
+its_reroot$node.label <- gsub("Root"," ",its_reroot$node.label)
+
+
+#all code is for below
+endos <- list(Present = c("NRRL 5549", "CBS112285", "ATCC 52811", "ATCC 52814", "NRRL 5546", "ATCC 62417", "NRRL 5547", "ATCC 56028", "ATCC 52812", "CBS11563", "ATCC 52813", "ATCC 56019"), Absent = c("16-88", "17-102", "Mucor circinelloides CBS195.68 type material", "16-129", "Rhizopus arrhizus CBS112.07 type material", "21-01", "Rhizopus microsporus CBS631.82 type material"))
+
+group_endos <- groupOTU(its_reroot, endos, group_name = "Symbiont")
+
+
+ggtree(group_endos) +
+  geom_nodelab(nudge_x = -0.03, nudge_y = 0.22, size = 2) +
+  geom_rootedge(0.02) +
+  geom_tiplab(aes(color = Symbiont), size = 3, label = "1") +
+  scale_color_manual(values=c("black", "green4", "blue")) +
+#  xlim(0,0.55)
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  geom_treescale() +
+  theme(text = element_text(family = "Times New Roman"))
+
+#label = "\u25A0"  This shape is in unicode
+#dev.off
+ggsave("its_unrooted.pdf", device = cairo_pdf, width = 20, height = 20, units = "cm", limitsize = FALSE)
+
+```
+
+
+
+
+
+
+
+
+```{r}
+sixteenS_tree <- read.newick("alned_env_EBH.fasta.treefile")
+
+#add spaces to taxon names
+sixteenS_tree$tip.label<-gsub("_"," ",sixteenS_tree$tip.label)
+
+#reroot the tree
+S_reroot <- reroot(sixteenS_tree, 7)
+
+#remove root from reroot
+S_reroot$node.label <- gsub("Root"," ",S_reroot$node.label) 
+
+
+ggtree(S_reroot) +
+  geom_tiplab(size = 4) +
+  geom_nodelab(nudge_x = -0.015, nudge_y = 0.2, size = 3) +
+ # geom_nodelab(aes(subset = S_reroot$node.label < 36, size = 7)) +
+  xlim(0,0.8) +
+  geom_treescale() 
+  
+ggsave("16S.pdf", width = 20, height = 20, units = "cm", limitsize = FALSE)
+
+
+```
+
+
+
+```{r}
+
+SNP_tree2 <- read.tree("micro_SNPs.fasta.treefile")
+data2 <- read.csv("micro_RM_names.csv")
+
+SNP_tree2$tip.label<-gsub("_"," ",SNP_tree2$tip.label)
+
+
+group_names2 <- list(Clinical = c(), Environmental = c(), Unknown = c())
+
+for (row in 1:nrow(data2)) {
+  if(data2[row, "Isolation.Site"] == "Clinical"){
+    print(data2[row, "Isolation.Site"])
+    group_names2[["Clinical"]] <- append(group_names2[["Clinical"]], data2[row, "Strain"]) 
+  }  
+  else if (data2[row, "Isolation.Site"] == "Environmental"){
+    group_names2[["Environmental"]] <- append(group_names2[["Environmental"]], data2[row, "Strain"])
+  }
+  else {
+     group_names2[["Unknown"]] <- append(group_names2[["Unknown"]], data2[row, "Strain"])
+  }
+}
+
+print(group_names2)
+rerooted <- reroot(SNP_tree2, 23)
+rerooted$node.label <- gsub("Root"," ",rerooted$node.label)
+grouping_ecology <- groupOTU(rerooted, group_names2, group_name = "Ecology")
+
+pal <- wes_palette("Cavalcanti1", 5, type = "continuous")
+
+#actual tree
+SNP_p <- ggtree(grouping_ecology) +
+  geom_hilight(node = 87, fill = "#000000", alpha = 0.1, extend = 0.025) +
+  geom_highlight(node = 88, fill = "#333333", alpha = 0.1, extend = 0.025) +
+  geom_highlight(node = 89, fill = "#666666", alpha = 0.05, extend = 0.21) +
+  scale_color_manual(values=c("red", "green4", "black"), labels = c("Clinical", "Environmental"), na.translate=FALSE) +
+  theme(legend.key.size = 10) +
+#  geom_nodelab(size = 1, hjust = 2) +
+  geom_tree() +
+  theme_tree() +
+  geom_treescale() +
+  geom_rootedge(0.03) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  geom_tiplab(size = 3, aes(color=Ecology)) +
+  xlim(0,0.28) +
+ # theme(legend.position = "bottom") +
+  new_scale_color()
+
+ SNP_p2 <- SNP_p %<+% data2 +
+  geom_tippoint(aes(colour=Variety, size = Shape)) + 
+  scale_size_continuous(range = c(1.5)) +
+# scale_color_jcolors("pal9", limits = c("azygosporus", "chinensis", "rhizopodiformis", "oligosporus", "microsporus","Unknown")) +
+  scale_colour_discrete(type = pal, limits = c("azygosporus", "chinensis", "microsporus", "oligosporus", "rhizopodiformis")) +
+  guides(size = FALSE) +
+  theme(legend.position = c(0.896, 0.836), legend.spacing.y = unit(0, "cm"))
+
+SNP_p2
+ 
+ggsave("SNP.pdf", device = cairo_pdf, width = 30, height = 20, units = "cm", limitsize = FALSE)
+
+#longer branch lengths
+ggtree(grouping_ecology, branch.length = "none") +
+  geom_hilight(node = 89, alpha = 0.1) +
+  geom_highlight(node = 90, alpha = 0.1, fill = "#666666") +
+  geom_highlight(node = 91, fill = "green", alpha = 0.15) +
+  geom_tiplab(size = 1.5, aes(color=Ecology), show.legend=FALSE) +
+  scale_color_manual(values=c("red", "green4", "black")) +
+  geom_nodelab(size = 0.1, hjust = 2) +
+  geom_tree() +
+  theme_tree() +
+  geom_treescale() +
+  geom_rootedge(0.003) +
+  geom_nodelab(size = 1.5, nudge_x = 0.2) 
+
+
+
+#https://stackoverflow.com/questions/55722055/add-legend-into-ggtree-ggplot-r
+#  geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) < 101), size = 1, label.size = .2) 
+```
+
+
+```{r}
+ortho_tree <- read.newick("micro_ortho.treefile")
+
+meta_data2 <- read.csv("micro_RM_names.csv")
+
+ortho_tree$edge.length <- ortho_tree$edge.length/max(nodeHeights(ortho_tree)[,2])*2
+
+ortho_tree$tip.label<-gsub("_"," ",ortho_tree$tip.label)
+
+#assign ecology to the dataframe called group names
+grouping_names2 <- list(Clinical = c(), Environmental = c(), Unknown = c())
+for (row in 1:nrow(meta_data2)) {
+  if(meta_data2[row, "Isolation.Site"] == "Clinical"){
+    print(meta_data2[row, "Isolation.Site"])
+    grouping_names2[["Clinical"]] <- append(grouping_names2[["Clinical"]], meta_data2[row, "Strain"]) 
+  }  
+  else if (meta_data2[row, "Isolation.Site"] == "Environmental"){
+    grouping_names2[["Environmental"]] <- append(grouping_names2[["Environmental"]], meta_data2[row, "Strain"])
+  }
+  else {
+     grouping_names2[["Unknown"]] <- append(grouping_names2[["Unknown"]], meta_data2[row, "Strain"])
+  }
+}
+#View(grouping_names2)
+
+
+  
+#reroot tree and remove "root" from the root, also add ecology to the tree
+rerooted2 <- reroot(ortho_tree, 16)
+rerooted2$node.label <- gsub("Root"," ",rerooted2$node.label)
+
+
+#Grouping eology together 
+group_ecology2 <- groupOTU(rerooted2, grouping_names2, group_name = "Ecology")
+#View(group_ecology2)
+
+
+roots <- rootnode(group_ecology2)
+#test <- cut(as.numeric(as.character(group_ecology2$node.label)), c(0,50,75,100))
+
+ 
+#unscales branch length tree
+ggtree(group_ecology2, branch.length = "none") +
+  geom_tiplab(size = 1.5, aes(color=Ecology)) +
+  geom_nodelab(size = 1.5, nudge_x = 0.2) +
+  scale_color_manual(values=c("red", "green4", "black")) +
+  geom_rootedge(0.003) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  geom_tippoint(size = 0.5) 
+
+#df3 <- data.frame(group_ecology.edge = group_ecology2$edge)
+
+#library(ggnewscale)
+#actual tree regular
+ortho_pal <- wes_palette("Cavalcanti1", 5, type = "continuous")
+
+ p1 <- ggtree(group_ecology2) +
+  geom_hilight(node=82, alpha=0.25, fill = "#000000", extend = 5) +
+  geom_hilight(node=84, alpha=0.15, fill = "#333333", extend = .5) +
+  geom_hilight(node=88, alpha=0.1, fill = "#666666", extend = 5) +
+  geom_tiplab(size = 2.5, aes(color=Ecology)) +
+  #geom_nodelab(size = 1.5) +
+  scale_color_manual(values=c("red", "green4", "black","yellow")) +
+  geom_rootedge(rootedge = 3) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  new_scale_color() 
+
+ p2 <- p1 %<+% meta_data2 +
+   geom_tippoint(aes(colour=Variety, size = Shape)) + 
+   scale_size_continuous(range = c(1.5)) +
+ #  scale_color_jcolors("pal9", limits = c("azygosporus", "chinensis", "rhizopodiformis", "oligosporus", "microsporus")) +
+   scale_colour_discrete(type = ortho_pal, limits = c("azygosporus", "chinensis", "microsporus", "oligosporus", "rhizopodiformis")) +
+   guides(size = FALSE) +
+   geom_treescale(width = 0.1) +
+   xlim(0,1.7)
+  # theme(legend.position = c(0.6, 0.75))
+
+ p2
+ 
+ ggsave("ortho.pdf", device = cairo_pdf, width = 30, height = 20, units = "cm", limitsize = FALSE)
+ 
+#actual tree circular
+ p3 <- ggtree(group_ecology2, layout = "fan") +
+  geom_hilight(node=82, alpha=0.25, fill = "#000000", extend = 0.6) +
+  geom_hilight(node=84, alpha=0.15, fill = "#333333", extend = 0.628) +
+  geom_hilight(node=88, alpha=0.1, fill = "#666666", extend = 0.525) +
+  geom_tiplab(size = 3, aes(color=Ecology), nudge_x = 0.01) +
+  #geom_nodelab(size = 1.5) +
+  scale_color_manual(values=c("red", "green4", "black", "yellow")) +
+  geom_rootedge(0.003) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  new_scale_color() +
+  xlim(0,0.9) 
+
+   
+ p4 <- p3 %<+% meta_data2 +
+   geom_tippoint(aes(colour=Variety, size = Shape)) + 
+   scale_size_continuous(range = c(1)) +
+  scale_color_manual(values = c("orange", "red", "purple", "pink", "blue", "black", "yellow")) +
+   guides(size = FALSE) 
+  
+ 
+ p4
+  
+```
+
+
+
+
+```{r}
+#took the country out of the names and try to add it as a legend. Didn't really work due to not enough shapes
+ortho_tree <- read.newick("micro2_ortho.treefile")
+
+meta_data2 <- read.csv("micro2_RM_names.csv")
+
+ortho_tree$tip.label<-gsub("_"," ",ortho_tree$tip.label)
+
+#assign ecology to the dataframe called group names
+grouping_names2 <- list(Clinical = c(), Environmental = c(), Unknown = c())
+for (row in 1:nrow(meta_data2)) {
+  if(meta_data2[row, "Isolation.Site"] == "Clinical"){
+    print(meta_data2[row, "Isolation.Site"])
+    grouping_names2[["Clinical"]] <- append(grouping_names2[["Clinical"]], meta_data2[row, "Strain"]) 
+  }  
+  else if (meta_data2[row, "Isolation.Site"] == "Environmental"){
+    grouping_names2[["Environmental"]] <- append(grouping_names2[["Environmental"]], meta_data2[row, "Strain"])
+  }
+  else {
+     grouping_names2[["Unknown"]] <- append(grouping_names2[["Unknown"]], meta_data2[row, "Strain"])
+  }
+}
+#View(grouping_names2)
+
+
+  
+#reroot tree and remove "root" from the root, also add ecology to the tree
+rerooted2 <- reroot(ortho_tree, 16)
+rerooted2$node.label <- gsub("Root"," ",rerooted2$node.label)
+
+
+#Grouping eology together 
+group_ecology2 <- groupOTU(rerooted2, grouping_names2, group_name = "Ecology")
+#View(group_ecology2)
+
+
+roots <- rootnode(group_ecology2)
+#test <- cut(as.numeric(as.character(group_ecology2$node.label)), c(0,50,75,100))
+ 
+ 
+#unscales branch length tree
+ggtree(group_ecology2, branch.length = "none") +
+  geom_tiplab(size = 1.5, aes(color=Ecology)) +
+  geom_nodelab(size = 1.5, nudge_x = 0.2) +
+  scale_color_manual(values=c("red", "green4", "black")) +
+  geom_rootedge(0.003) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  geom_tippoint(size = 0.5) 
+
+#df3 <- data.frame(group_ecology.edge = group_ecology2$edge)
+
+#library(ggnewscale)
+#actual tree
+ p1 <- ggtree(group_ecology2) +
+  geom_hilight(node=82, alpha=0.25, fill = "#000000", extend = 5) +
+  geom_hilight(node=84, alpha=0.15, fill = "#333333", extend = .5) +
+  geom_hilight(node=88, alpha=0.1, fill = "#666666", extend = 5) +
+  geom_tiplab(size = 3, aes(color=Ecology)) +
+  #geom_nodelab(size = 1.5) +
+  scale_color_manual(values=c("red", "green4", "black","yellow")) +
+  geom_rootedge(0.003) +
+  guides(color = guide_legend(override.aes = list(label = "\u25CF", size = 5))) +
+  new_scale_color()
+
+ p2 <- p1 %<+% meta_data2 +
+   geom_tippoint(aes(colour=Country, shape = Variety)) + 
+#   scale_size_continuous(range = c(1)) +
+#  scale_color_manual(values = c("orange", "red", "purple", "pink", "blue", "black", "yellow")) +
+   guides(size = FALSE) 
+  
+ 
+ p2
+ 
+
+```
+
+
+
+
+```{R}
+new_tree <- read.tree("new_SNP_tree")
+
+new_tree$tip.label<-gsub("SNPoutputa_"," ",new_tree$tip.label)
+
+rer <- reroot(new_tree, 27)
+
+ggtree(rer, branch.length = 'none') +
+  geom_tiplab(size = 2)
+
+```
+
+
+
+
