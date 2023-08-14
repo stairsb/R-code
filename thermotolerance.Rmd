@@ -1,0 +1,104 @@
+
+
+```{r}
+library("AICcmodavg")
+library(dplyr)
+library(ggplot2)
+
+
+#load in the data
+metadata <- read.csv("new_final_data.csv")
+
+#filtering the data
+filtereds <- metadata %>% group_by(Isolate, Temperature,Ecology) %>% group_modify(~ broom::tidy(lm(Ave_radial_growth_cm ~ Measurement, data = .x)))
+filter3 <- filtereds %>% filter(term == "Measurement")
+
+#two-way ANOVA R code
+two.way <- aov(estimate ~ Temperature + Ecology, data = filter3)
+
+#Two-way ANOVA with interaction R code
+interactions <- aov(estimate ~ Temperature * Ecology, data = filter3)
+interactions
+two.way
+
+#finding the best-fit model (model that explains the most variation)
+model.set <- list(two.way, interactions)
+model.names <- c("two.way", "interactions")
+aictab(model.set, modnames = model.names)
+
+summary(two.way)
+summary(interactions)
+
+#Tukey Post-hoc testing. (Used to find out what levels in are different from one another)
+TukeyHSD(two.way)
+
+
+#making the actual box plot
+ggplot(filter3, aes(x = Temperature, y = estimate, fill = Ecology)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("orangered", "deepskyblue3")) +
+  xlab(label = "Temperature") +
+  ylab(label = "Radial mycelial growth rate (cm/12 hours)") +
+  theme_classic()
+
+#output pdf of thermotolerance plot
+ggsave("thermotolerance.pdf", device = cairo_pdf, width = 30, height = 20, units = "cm", limitsize = FALSE) 
+
+```
+
+
+
+
+
+```{r}
+library(ggplot2)
+
+pdf("thermobar.pdf", width = 12, height = 8)
+thermo <- read.csv("new_final_data.csv")
+
+
+thermo$Measurement <- as.factor(thermo$Measurement)
+
+#box plot
+thermo_plot <- ggplot(data = thermo, aes(x = Measurement, y = Ave_radial_growth_cm, fill = Temperature)) + 
+  scale_fill_manual(values = c( "deepskyblue3", "orangered")) +
+  xlab(label = "Time (hours)") +
+  ylab(label = "Radial Growth (cm)") +
+  geom_boxplot() +
+  theme_bw() +
+  guides(fill=guide_legend(title="Temperature", size = 0.1)) +
+  theme(text=element_text(size=15,  family="Times"))
+
+thermo_plot
+
+```
+
+
+
+
+```{r}
+library(ggplot2)
+
+thermo5 <- read.csv("new_final_data.csv")
+
+#line plot
+final_plot3 <- ggplot(data = thermo5, mapping = aes(x = as.numeric(Measurement)*12, y = as.numeric(Ave_radial_growth_cm), group = Isolate, color = Ecology)) +
+  geom_line(alpha=0.5) +
+  theme(axis.text.y = , axis.ticks.y = element_blank()) +
+  scale_y_continuous(breaks=c(0,1,2,3,4,5)) +
+  scale_x_continuous(breaks=seq(0,288,12)) +
+  theme_bw() +
+  xlab(label = "Time (hours)") +
+  ylab(label = "Radial Growth") +
+  scale_color_manual(values = c("orangered","deepskyblue3"))
+
+final_plot3
+
+```
+
+
+
+
+
+
+
